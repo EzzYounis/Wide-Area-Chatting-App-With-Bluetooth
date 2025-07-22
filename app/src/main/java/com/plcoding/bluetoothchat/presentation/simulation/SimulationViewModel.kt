@@ -1,4 +1,4 @@
-// SimulationViewModel.kt
+// SimulationViewModel.kt - Updated for improved UI
 package com.plcoding.bluetoothchat.presentation.simulation
 
 import androidx.lifecycle.ViewModel
@@ -24,6 +24,12 @@ class SimulationViewModel @Inject constructor(
 
     private val _selectedNode = MutableStateFlow<VirtualNodeState?>(null)
     val selectedNode: StateFlow<VirtualNodeState?> = _selectedNode.asStateFlow()
+
+    private val _sourceNode = MutableStateFlow<VirtualNodeState?>(null)
+    val sourceNode: StateFlow<VirtualNodeState?> = _sourceNode.asStateFlow()
+
+    private val _destinationNode = MutableStateFlow<VirtualNodeState?>(null)
+    val destinationNode: StateFlow<VirtualNodeState?> = _destinationNode.asStateFlow()
 
     private val _messageLog = MutableStateFlow<List<MessageEvent>>(emptyList())
     val messageLog: StateFlow<List<MessageEvent>> = _messageLog.asStateFlow()
@@ -57,6 +63,8 @@ class SimulationViewModel @Inject constructor(
             )
         )
         _selectedNode.value = null
+        _sourceNode.value = null
+        _destinationNode.value = null
         _messageLog.value = emptyList()
     }
 
@@ -68,6 +76,8 @@ class SimulationViewModel @Inject constructor(
             )
         )
         _selectedNode.value = null
+        _sourceNode.value = null
+        _destinationNode.value = null
         _messageLog.value = emptyList()
     }
 
@@ -79,12 +89,16 @@ class SimulationViewModel @Inject constructor(
             )
         )
         _selectedNode.value = null
+        _sourceNode.value = null
+        _destinationNode.value = null
         _messageLog.value = emptyList()
     }
 
     fun clearNetwork() {
         simulationEngine.clearSimulation()
         _selectedNode.value = null
+        _sourceNode.value = null
+        _destinationNode.value = null
         _messageLog.value = emptyList()
     }
 
@@ -102,15 +116,39 @@ class SimulationViewModel @Inject constructor(
         }
     }
 
+    fun selectSourceNode(node: VirtualNodeState) {
+        _sourceNode.value = node
+
+        // Subscribe to source node's messages
+        val virtualNode = simulationEngine.getNode(node.nodeId)
+        virtualNode?.let { vNode ->
+            viewModelScope.launch {
+                vNode.incomingMessages.collect { message ->
+                    handleIncomingMessage(vNode, message)
+                }
+            }
+        }
+    }
+
+    fun selectDestinationNode(node: VirtualNodeState) {
+        _destinationNode.value = node
+    }
+
     suspend fun sendMessage(from: String, to: String, content: String) {
         val sourceNode = simulationEngine.getNode(from) ?: return
+        val targetNode = simulationEngine.getNode(to) ?: return
+
+        // Clear previous message log for better clarity
+        if (_messageLog.value.size > 50) {
+            _messageLog.value = _messageLog.value.takeLast(30)
+        }
 
         // Log sending event
         addMessageEvent(
             MessageEvent(
                 type = MessageEventType.SENT,
-                description = "${sourceNode.nodeName} → $to",
-                details = "Message: ${content.take(50)}...",
+                description = "${sourceNode.nodeName} → ${targetNode.nodeName}",
+                details = content,
                 timestamp = dateFormatter.format(Date())
             )
         )
@@ -131,6 +169,12 @@ class SimulationViewModel @Inject constructor(
     }
 
     private suspend fun handleIncomingMessage(node: VirtualBluetoothNode, message: SimulatedMessage) {
+        // Only process messages for the destination node in chat mode
+        if (_destinationNode.value != null && node.nodeId != _destinationNode.value?.nodeId) {
+            // This is a forwarding node, don't show as received
+            return
+        }
+
         // Run IDS analysis
         val idsResult = idsModel.analyzeMessage(
             message = message.content,
@@ -143,45 +187,58 @@ class SimulationViewModel @Inject constructor(
             addMessageEvent(
                 MessageEvent(
                     type = MessageEventType.ATTACK_DETECTED,
-                    description = "⚠️ ${idsResult.attackType} ATTACK from ${message.source}",
-                    details = "Confidence: ${String.format("%.1f", idsResult.confidence * 100)}%",
+                    description = "⚠️ ${idsResult.attackType} ATTACK",
+                    details = "From: ${message.source}\nConfidence: ${String.format("%.1f", idsResult.confidence * 100)}%\nMessage: ${message.content}",
+                    timestamp = dateFormatter.format(Date())
+                )
+            )
+        } else {
+            // Log received message
+            val sourceNode = simulationEngine.getNode(message.source)
+            addMessageEvent(
+                MessageEvent(
+                    type = MessageEventType.RECEIVED,
+                    description = "${sourceNode?.nodeName ?: message.source} → ${node.nodeName}",
+                    details = message.content,
                     timestamp = dateFormatter.format(Date())
                 )
             )
         }
-
-        // Log received message
-        addMessageEvent(
-            MessageEvent(
-                type = MessageEventType.RECEIVED,
-                description = "${node.nodeName} received from ${message.source}",
-                details = "Hops: ${message.hopCount}, Message: ${message.content.take(50)}...",
-                timestamp = dateFormatter.format(Date())
-            )
-        )
     }
 
     private fun handleNetworkEvent(event: SimulationEngine.NetworkEvent) {
         when (event) {
             is SimulationEngine.NetworkEvent.MessageSent -> {
-                addMessageEvent(
-                    MessageEvent(
-                        type = MessageEventType.FORWARDED,
-                        description = "Forwarded: ${event.from} → ${event.to}",
-                        details = "Hop count: ${event.hopCount}",
-                        timestamp = dateFormatter.format(Date())
+                val fromNode = simulationEngine.getNode(event.from)
+                val toNode = simulationEngine.getNode(event.to)
+
+                // Only log forwarding events, not direct sends
+                if (event.hopCount > 0) {
+                    addMessageEvent(
+                        MessageEvent(
+                            type = MessageEventType.FORWARDED,
+                            description = "Hop ${event.hopCount}: ${fromNode?.nodeName ?: event.from} → ${toNode?.nodeName ?: event.to}",
+                            details = "Message forwarded",
+                            timestamp = dateFormatter.format(Date())
+                        )
                     )
-                )
+                }
             }
             is SimulationEngine.NetworkEvent.MessageDelivered -> {
                 addMessageEvent(
                     MessageEvent(
                         type = MessageEventType.DELIVERED,
-                        description = "Message delivered successfully",
+                        description = "✓ Message delivered",
                         details = "Total hops: ${event.totalHops}",
                         timestamp = dateFormatter.format(Date())
                     )
                 )
+            }
+            is SimulationEngine.NetworkEvent.RouteDiscoveryStarted -> {
+                // Optional: Show route discovery in progress
+            }
+            is SimulationEngine.NetworkEvent.RouteDiscovered -> {
+                // Optional: Show route found
             }
             else -> {
                 // Handle other events if needed
@@ -212,6 +269,10 @@ class SimulationViewModel @Inject constructor(
 
     private fun addMessageEvent(event: MessageEvent) {
         _messageLog.value = (_messageLog.value + event).takeLast(100)
+    }
+
+    fun clearMessageLog() {
+        _messageLog.value = emptyList()
     }
 
     override fun onCleared() {
