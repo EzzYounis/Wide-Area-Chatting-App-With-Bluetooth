@@ -98,6 +98,7 @@ dependencies {
 
 
     implementation 'androidx.compose.material:material:1.4.3' // or latest stable
+    implementation "androidx.compose.material:material:$compose_version"
 
 
 

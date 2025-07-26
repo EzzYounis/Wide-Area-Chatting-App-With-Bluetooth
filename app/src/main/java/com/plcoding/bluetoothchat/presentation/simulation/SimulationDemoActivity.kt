@@ -1,4 +1,6 @@
 // SimulationDemoActivity.kt - Complete Fixed Implementation
+@file:OptIn(ExperimentalAnimationApi::class)
+
 package com.plcoding.bluetoothchat.presentation.simulation
 
 import android.os.Bundle
@@ -77,7 +79,7 @@ class SimulationDemoActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterialApi::class, ExperimentalAnimationApi::class)
 @Composable
 fun NodeSelectionScreen(
     viewModel: SimulationViewModel,
@@ -222,7 +224,7 @@ fun TopologySelectionStep(
         TopologyOption(
             title = "Mesh Network",
             description = "9 nodes arranged in a 3x3 grid pattern",
-            icon = Icons.Default.Apps,
+            icon = Icons.Default.DateRange,  // Changed from Apps
             color = Color(0xFF4CAF50),
             onClick = { onTopologySelected("mesh") }
         )
@@ -232,7 +234,7 @@ fun TopologySelectionStep(
         TopologyOption(
             title = "Chain Network",
             description = "5 nodes connected in a linear chain",
-            icon = Icons.Default.Timeline,
+            icon = Icons.Default.Home,  // Changed from Timeline
             color = Color(0xFF2196F3),
             onClick = { onTopologySelected("chain") }
         )
@@ -242,7 +244,7 @@ fun TopologySelectionStep(
         TopologyOption(
             title = "Star Network",
             description = "Central hub with 6 peripheral nodes",
-            icon = Icons.Default.StarBorder,
+            icon = Icons.Default.Star,  // Changed from StarBorder
             color = Color(0xFFFF9800),
             onClick = { onTopologySelected("star") }
         )
@@ -313,7 +315,7 @@ fun TopologyOption(
             }
 
             Icon(
-                Icons.Default.ChevronRight,
+                Icons.Default.KeyboardArrowRight,  // Changed from ChevronRight
                 contentDescription = "Select",
                 tint = color
             )
@@ -443,7 +445,7 @@ fun NodeCard(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    Icons.Default.Router,
+                    Icons.Default.List,  // Changed from Router
                     contentDescription = node.nodeName,
                     tint = Color.White,
                     modifier = Modifier.size(24.dp)
@@ -683,7 +685,27 @@ fun EnhancedChatScreen(
                 .background(Color(0xFFF5F5F5))
         ) {
             if (messageLog.isEmpty()) {
-                EmptyChatPlaceholder()
+                // Empty chat placeholder
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.MailOutline,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = Color.Gray.copy(alpha = 0.5f)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Send a message to start the simulation",
+                        color = Color.Gray,
+                        fontSize = 16.sp
+                    )
+                }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -703,11 +725,35 @@ fun EnhancedChatScreen(
                 enter = slideInVertically() + fadeIn(),
                 exit = slideOutVertically() + fadeOut()
             ) {
-                ConnectionInfoOverlay(
-                    sourceNode = sourceNode,
-                    destinationNode = destinationNode,
-                    onDismiss = { showInfo = false }
-                )
+                // Simple info overlay
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    elevation = 8.dp,
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            "Connection Info",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Source: ${sourceNode?.nodeName}")
+                        Text("Destination: ${destinationNode?.nodeName}")
+                        Text("Hop count will be shown in messages")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = { showInfo = false },
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text("Close")
+                        }
+                    }
+                }
             }
         }
     }
@@ -916,9 +962,9 @@ fun SystemMessageCard(event: MessageEvent) {
         ) {
             Icon(
                 when (event.type) {
-                    MessageEventType.FORWARDED -> Icons.Default.SwapHoriz
+                    MessageEventType.FORWARDED -> Icons.Default.Build
                     MessageEventType.DELIVERED -> Icons.Default.Check
-                    MessageEventType.DROPPED -> Icons.Default.Cancel
+                    MessageEventType.DROPPED -> Icons.Default.Clear
                     else -> Icons.Default.Info
                 },
                 contentDescription = null,
