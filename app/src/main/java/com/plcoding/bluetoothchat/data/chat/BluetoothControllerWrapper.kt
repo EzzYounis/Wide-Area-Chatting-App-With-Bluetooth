@@ -1,3 +1,4 @@
+// Update to use SimulationBluetoothController
 package com.plcoding.bluetoothchat.data.chat
 
 import com.plcoding.bluetoothchat.domain.chat.BluetoothController
@@ -11,7 +12,7 @@ class BluetoothControllerWrapper @Inject constructor(
 
     fun setSecurityAlertCallback(callback: (SecurityAlert) -> Unit) {
         this.securityAlertCallback = callback
-        (controller as? AndroidBluetoothController)?.setSecurityAlertCallback(callback)
+        (controller as? SimulationBluetoothController)?.setSecurityAlertCallback(callback)
     }
 
     fun getController(): BluetoothController = controller

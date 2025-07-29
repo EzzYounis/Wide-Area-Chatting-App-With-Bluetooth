@@ -1,7 +1,6 @@
 package com.plcoding.bluetoothchat.presentation
 
 import com.plcoding.bluetoothchat.domain.chat.BluetoothController
-import com.plcoding.bluetoothchat.presentation.BluetoothViewModel.AttackType.SPOOFING
 import kotlinx.coroutines.delay
 import java.util.UUID
 import kotlin.random.Random
@@ -24,9 +23,11 @@ class AttackOrchestrator(
 
     suspend fun executeAttack(type: BluetoothViewModel.AttackType) {
         when (type) {
-            SPOOFING -> simulateSpoofing()
+            BluetoothViewModel.AttackType.SPOOFING -> simulateSpoofing()
             BluetoothViewModel.AttackType.INJECTION -> simulateInjection()
             BluetoothViewModel.AttackType.FLOODING -> simulateFlooding()
+            BluetoothViewModel.AttackType.EXPLOIT -> simulateExploit()
+            BluetoothViewModel.AttackType.COORDINATED -> simulateCoordinated()
             BluetoothViewModel.AttackType.NONE -> return
         }
     }
@@ -64,6 +65,14 @@ class AttackOrchestrator(
             detectionMethod = "Simulated Attack",
             explanation = "This is a simulated message flooding attack"
         )
+    }
+
+    private suspend fun simulateExploit() {
+        // Implementation for exploit simulation
+    }
+
+    private suspend fun simulateCoordinated() {
+        // Implementation for coordinated attack simulation
     }
 
     private fun triggerAlert(

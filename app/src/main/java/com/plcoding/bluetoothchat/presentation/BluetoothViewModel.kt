@@ -18,10 +18,11 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
+import com.plcoding.bluetoothchat.presentation.simulation.EnhancedAttackSimulation
 
 @HiltViewModel
 class BluetoothViewModel @Inject constructor(
-    private val bluetoothController: BluetoothController,
+    val bluetoothController: BluetoothController,
     private val idsModel: IDSModel,
 
     private val savedStateHandle: SavedStateHandle,
@@ -104,6 +105,8 @@ class BluetoothViewModel @Inject constructor(
         SPOOFING,
         INJECTION,
         FLOODING,
+        EXPLOIT,
+        COORDINATED,
         NONE
     }
 
@@ -227,6 +230,27 @@ class BluetoothViewModel @Inject constructor(
         deviceConnectionJob = bluetoothController
             .startBluetoothServer()
             .listen()
+    }
+    fun simulateEnhancedAttack(attackType: AttackType) {
+        viewModelScope.launch {
+            val simulator = EnhancedAttackSimulation(
+                this@BluetoothViewModel,
+                bluetoothController
+            )
+
+            when (attackType) {
+                AttackType.FLOODING -> simulator.executeFloodingAttack(
+                    EnhancedAttackSimulation.FloodIntensity.MEDIUM
+                )
+                AttackType.INJECTION -> simulator.executeInjectionAttack(
+                    EnhancedAttackSimulation.InjectionType.MIXED
+                )
+                AttackType.SPOOFING -> simulator.executeSpoofingAttack()
+                AttackType.EXPLOIT -> simulator.executeExploitAttack()
+                AttackType.COORDINATED -> simulator.executeCoordinatedAttack()
+                AttackType.NONE -> return@launch
+            }
+        }
     }
 
     fun sendMessage(message: String) {
@@ -674,6 +698,14 @@ class BluetoothViewModel @Inject constructor(
                 AttackType.FLOODING -> List(15) { i ->
                     "FLOOD_${System.currentTimeMillis()}_$i"
                 }
+                AttackType.EXPLOIT -> listOf(
+                    "EXPLOIT attempt: buffer overflow payload",
+                    "EXPLOIT: CVE-2023-12345 detected"
+                )
+                AttackType.COORDINATED -> listOf(
+                    "COORDINATED attack: multiple suspicious actions detected",
+                    "COORDINATED: simultaneous spoofing and flooding"
+                )
                 AttackType.NONE -> listOf("Normal test message")
             }
 

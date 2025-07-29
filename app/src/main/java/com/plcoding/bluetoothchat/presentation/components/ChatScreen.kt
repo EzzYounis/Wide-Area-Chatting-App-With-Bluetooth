@@ -8,15 +8,15 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.plcoding.bluetoothchat.presentation.BluetoothUiState
 import com.plcoding.bluetoothchat.presentation.BluetoothViewModel
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 @Composable
@@ -63,7 +64,7 @@ fun ChatScreen(
         // Header with Security Status
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            elevation = 4.dp,
+            shadowElevation = 4.dp,
             color = when (securityStatus) {
                 SecurityStatus.SAFE -> Color(0xFF4CAF50)
                 SecurityStatus.WARNING -> Color(0xFFFF9800)
@@ -155,7 +156,7 @@ fun ChatScreen(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = Color(0xFFE3F2FD),
-            elevation = 2.dp
+            shadowElevation = 2.dp
         ) {}
 
         // Attack Statistics Bar (if attacks detected)
@@ -163,7 +164,7 @@ fun ChatScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 color = Color(0xFFFFF3CD),
-                elevation = 2.dp
+                shadowElevation = 2.dp
             ) {
                 Row(
                     modifier = Modifier
@@ -223,7 +224,7 @@ fun ChatScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 color = Color(0xFFFFEBEE),
-                elevation = 2.dp
+                shadowElevation = 2.dp
             ) {
                 Column(modifier = Modifier.padding(8.dp)) {
                     Text(
@@ -238,21 +239,21 @@ fun ChatScreen(
                     ) {
                         Button(
                             onClick = { viewModel.simulateAttack(BluetoothViewModel.AttackType.SPOOFING) },
-                            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFFF9800)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800)),
                             modifier = Modifier.height(36.dp)
                         ) {
                             Text("Spoofing", fontSize = 12.sp)
                         }
                         Button(
                             onClick = { viewModel.simulateAttack(BluetoothViewModel.AttackType.INJECTION) },
-                            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFF44336)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336)),
                             modifier = Modifier.height(36.dp)
                         ) {
                             Text("Injection", fontSize = 12.sp)
                         }
                         Button(
                             onClick = { viewModel.simulateAttack(BluetoothViewModel.AttackType.FLOODING) },
-                            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF9C27B0)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0)),
                             modifier = Modifier.height(36.dp)
                         ) {
                             Text("Flooding", fontSize = 12.sp)
@@ -266,14 +267,14 @@ fun ChatScreen(
                     ) {
                         Button(
                             onClick = { viewModel.testIDSSystem() },
-                            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF2196F3)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
                             modifier = Modifier.height(36.dp)
                         ) {
                             Text("Run Tests", fontSize = 12.sp)
                         }
                         Button(
                             onClick = { viewModel.resetModel() },
-                            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF607D8B)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF607D8B)),
                             modifier = Modifier.height(36.dp)
                         ) {
                             Text("Reset IDS", fontSize = 12.sp)
@@ -312,7 +313,7 @@ fun ChatScreen(
                                     else -> Color(0xFF607D8B)
                                 },
                                 shape = RoundedCornerShape(12.dp),
-                                elevation = 2.dp
+                                shadowElevation = 2.dp
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -357,8 +358,9 @@ fun ChatScreen(
                 onValueChange = { message.value = it },
                 placeholder = { Text("Message") },
                 modifier = Modifier.weight(1f),
-                colors = TextFieldDefaults.textFieldColors(
-                    backgroundColor = Color.LightGray.copy(alpha = 0.3f)
+                colors = TextFieldDefaults.colors(
+                    unfocusedContainerColor = Color.LightGray.copy(alpha = 0.3f),
+                    focusedContainerColor = Color.LightGray.copy(alpha = 0.3f)
                 )
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -372,9 +374,9 @@ fun ChatScreen(
                 }
             ) {
                 Icon(
-                    imageVector = Icons.Default.Send,
+                    imageVector = Icons.AutoMirrored.Filled.Send,
                     contentDescription = "Send message",
-                    tint = MaterialTheme.colors.primary
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -412,15 +414,15 @@ fun ChatScreen(
                         )
                     }
 
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                     // Statistics
-                    StatisticRow("Total Messages:", idsStatistics.totalMessages.toString())
-                    StatisticRow("Message Rate:", "${String.format("%.1f", idsStatistics.messageRate)} msg/min")
-                    StatisticRow("Attack Rate:", "${String.format("%.1f", idsStatistics.detectionRate)}%")
-                    StatisticRow("Total Attacks:", idsStatistics.attacksDetected.values.sum().toString())
+                    ChatStatisticRow("Total Messages:", idsStatistics.totalMessages.toString())
+                    ChatStatisticRow("Message Rate:", "${String.format(Locale.getDefault(), "%.1f", idsStatistics.messageRate)} msg/min")
+                    ChatStatisticRow("Attack Rate:", "${String.format(Locale.getDefault(), "%.1f", idsStatistics.detectionRate)}%")
+                    ChatStatisticRow("Total Attacks:", idsStatistics.attacksDetected.values.sum().toString())
 
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                     // Attack Breakdown
                     Text("Attack Breakdown:", fontWeight = FontWeight.Bold)
@@ -446,7 +448,7 @@ fun ChatScreen(
                         }
                     }
 
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                     // Recent Notifications
                     if (attackNotifications.isNotEmpty()) {
@@ -456,12 +458,14 @@ fun ChatScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(top = 4.dp),
-                                backgroundColor = when(notification.severity) {
-                                    BluetoothViewModel.AttackSeverity.CRITICAL -> Color(0xFFFFEBEE)
-                                    BluetoothViewModel.AttackSeverity.HIGH -> Color(0xFFFFF3E0)
-                                    BluetoothViewModel.AttackSeverity.MEDIUM -> Color(0xFFE3F2FD)
-                                    BluetoothViewModel.AttackSeverity.LOW -> Color(0xFFE8F5E9)
-                                }
+                                colors = CardDefaults.cardColors(
+                                    containerColor = when(notification.severity) {
+                                        BluetoothViewModel.AttackSeverity.CRITICAL -> Color(0xFFFFEBEE)
+                                        BluetoothViewModel.AttackSeverity.HIGH -> Color(0xFFFFF3E0)
+                                        BluetoothViewModel.AttackSeverity.MEDIUM -> Color(0xFFE3F2FD)
+                                        BluetoothViewModel.AttackSeverity.LOW -> Color(0xFFE8F5E9)
+                                    }
+                                )
                             ) {
                                 Column(modifier = Modifier.padding(8.dp)) {
                                     Row(
@@ -510,7 +514,7 @@ fun ChatScreen(
 }
 
 @Composable
-private fun StatisticRow(label: String, value: String) {
+private fun ChatStatisticRow(label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

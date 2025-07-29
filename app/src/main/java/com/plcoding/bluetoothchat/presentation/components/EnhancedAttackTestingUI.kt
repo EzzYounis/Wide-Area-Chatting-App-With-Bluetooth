@@ -1,5 +1,16 @@
 package com.plcoding.bluetoothchat.presentation.components
-
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -24,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import com.plcoding.bluetoothchat.presentation.BluetoothViewModel
 import com.plcoding.bluetoothchat.presentation.simulation.EnhancedAttackSimulation
 import kotlinx.coroutines.launch
+import androidx.compose.ui.graphics.vector.ImageVector
 
 @Composable
 fun EnhancedAttackTestPanel(
@@ -99,7 +111,7 @@ fun EnhancedAttackTestPanel(
             // Attack Categories
             AttackCategorySection(
                 title = "Flooding Attacks",
-                icon = Icons.Default.Flood,
+                icon = Icons.Default.Warning,
                 color = Color(0xFF9C27B0),
                 isExpanded = expandedSection == "flooding",
                 onExpandToggle = {
@@ -151,7 +163,7 @@ fun EnhancedAttackTestPanel(
 
             AttackCategorySection(
                 title = "Spoofing Attacks",
-                icon = Icons.Default.PersonOff,
+                icon = Icons.Default.Person,
                 color = Color(0xFFFF9800),
                 isExpanded = expandedSection == "spoofing",
                 onExpandToggle = {
@@ -175,7 +187,7 @@ fun EnhancedAttackTestPanel(
 
             AttackCategorySection(
                 title = "Exploit Attacks",
-                icon = Icons.Default.BugReport,
+                icon = Icons.Default.Lock,
                 color = Color(0xFFE91E63),
                 isExpanded = expandedSection == "exploit",
                 onExpandToggle = {
@@ -253,7 +265,7 @@ fun EnhancedAttackTestPanel(
 @Composable
 fun AttackCategorySection(
     title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     color: Color,
     isExpanded: Boolean,
     onExpandToggle: () -> Unit,
@@ -292,7 +304,7 @@ fun AttackCategorySection(
                 }
 
                 Icon(
-                    if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                     contentDescription = if (isExpanded) "Collapse" else "Expand",
                     tint = color
                 )
@@ -316,6 +328,7 @@ fun AttackCategorySection(
     }
 }
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun FloodingAttackOptions(
     selectedIntensity: EnhancedAttackSimulation.FloodIntensity,
@@ -508,7 +521,7 @@ fun SpoofingAttackOptions(
                 backgroundColor = Color(0xFFFF9800)
             )
         ) {
-            Icon(Icons.Default.PersonOff, contentDescription = null)
+            Icon(Icons.Default.Person, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
             Text("Execute Spoofing Attack")
         }
@@ -567,7 +580,7 @@ fun ExploitAttackOptions(
                 backgroundColor = Color(0xFFE91E63)
             )
         ) {
-            Icon(Icons.Default.BugReport, contentDescription = null)
+            Icon(Icons.Default.Lock, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
             Text("Execute Exploit Attack")
         }
@@ -593,6 +606,7 @@ fun QuickAttackBar(
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     Row(
         modifier = modifier
@@ -611,7 +625,7 @@ fun QuickAttackBar(
                 .background(Color(0xFF9C27B0).copy(alpha = 0.1f))
         ) {
             Icon(
-                Icons.Default.Flood,
+                Icons.Default.Warning,
                 contentDescription = "Flooding",
                 tint = Color(0xFF9C27B0),
                 modifier = Modifier.size(20.dp)
@@ -647,7 +661,7 @@ fun QuickAttackBar(
                 .background(Color(0xFFFF9800).copy(alpha = 0.1f))
         ) {
             Icon(
-                Icons.Default.PersonOff,
+                Icons.Default.Person,
                 contentDescription = "Spoofing",
                 tint = Color(0xFFFF9800),
                 modifier = Modifier.size(20.dp)
@@ -672,15 +686,15 @@ fun QuickAttackBar(
                 onDismissRequest = { showMenu = false }
             ) {
                 DropdownMenuItem(onClick = {
-                    val simulator = EnhancedAttackSimulation(viewModel, viewModel.bluetoothController)
-                    viewModel.viewModelScope.launch {
+                    coroutineScope.launch {
+                        val simulator = EnhancedAttackSimulation(viewModel, viewModel.bluetoothController)
                         simulator.executeExploitAttack()
                     }
                     showMenu = false
                 }) {
                     Row {
                         Icon(
-                            Icons.Default.BugReport,
+                            Icons.Default.Lock,
                             contentDescription = null,
                             tint = Color(0xFFE91E63)
                         )
@@ -690,8 +704,8 @@ fun QuickAttackBar(
                 }
 
                 DropdownMenuItem(onClick = {
-                    val simulator = EnhancedAttackSimulation(viewModel, viewModel.bluetoothController)
-                    viewModel.viewModelScope.launch {
+                    coroutineScope.launch {
+                        val simulator = EnhancedAttackSimulation(viewModel, viewModel.bluetoothController)
                         simulator.executeCoordinatedAttack()
                     }
                     showMenu = false
@@ -715,7 +729,7 @@ fun QuickAttackBar(
                 }) {
                     Row {
                         Icon(
-                            Icons.Default.Assessment,
+                            Icons.Default.Build,
                             contentDescription = null
                         )
                         Spacer(modifier = Modifier.width(8.dp))

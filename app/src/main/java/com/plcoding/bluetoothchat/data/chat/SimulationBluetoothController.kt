@@ -1,7 +1,5 @@
-// AndroidBluetoothController.kt - Simplified for Simulation Mode
 package com.plcoding.bluetoothchat.data.chat
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
 import com.plcoding.bluetoothchat.domain.chat.*
@@ -11,12 +9,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 
-/**
- * Simplified Bluetooth controller for simulation mode
- * No real Bluetooth functionality - everything is simulated
- */
-@SuppressLint("MissingPermission")
-class AndroidBluetoothController @Inject constructor(
+
+class SimulationBluetoothController @Inject constructor(
     private val context: Context,
     private val messageLogDao: MessageLogDao?
 ) : BluetoothController {
@@ -28,6 +22,7 @@ class AndroidBluetoothController @Inject constructor(
 
     // Security callback
     private var onSecurityAlert: (SecurityAlert) -> Unit = { _ -> }
+
     fun setSecurityAlertCallback(callback: (SecurityAlert) -> Unit) {
         this.onSecurityAlert = callback
         dataTransferService?.let {
@@ -60,13 +55,15 @@ class AndroidBluetoothController @Inject constructor(
     private val coroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     init {
-        Log.d("BluetoothController", "Initializing in SIMULATION MODE")
+        Log.d("SimulationController", "Initializing Simulation-Only Mode")
 
         // Initialize simulation with default topology
         simulationEngine.initializeSimulation(
             SimulationConfig(
                 topology = TopologyType.MESH,
-                nodeCount = 8
+                nodeCount = 9,
+                simulationSpeed = SimulationSpeed.NORMAL,
+                enablePacketLoss = true
             )
         )
 
@@ -82,15 +79,15 @@ class AndroidBluetoothController @Inject constructor(
     }
 
     override fun startDiscovery() {
-        Log.d("BluetoothController", "Starting simulated discovery")
+        Log.d("SimulationController", "Starting simulated discovery")
 
-        // Simulate discovery by gradually revealing nodes
         coroutineScope.launch {
             val allNodes = simulationEngine.getAllNodes()
             val devices = mutableListOf<BluetoothDeviceDomain>()
 
+            // Simulate gradual discovery
             allNodes.forEach { node ->
-                delay(500) // Simulate discovery delay
+                delay(300) // Simulate discovery delay
                 devices.add(
                     BluetoothDevice(
                         name = node.nodeName,
@@ -103,27 +100,25 @@ class AndroidBluetoothController @Inject constructor(
     }
 
     override fun stopDiscovery() {
-        Log.d("BluetoothController", "Stopping simulated discovery")
-        // No-op in simulation
+        Log.d("SimulationController", "Stopping simulated discovery")
     }
 
     override fun startBluetoothServer(): Flow<ConnectionResult> = flow {
-        Log.d("BluetoothController", "Starting simulated Bluetooth server")
+        Log.d("SimulationController", "Starting simulated server")
 
         // Create a local virtual node
         currentVirtualNode = simulationEngine.createNode(
-            id = "local_server_${System.currentTimeMillis()}",
-            name = "My Device (Server)",
+            id = "server_${System.currentTimeMillis()}",
+            name = "Simulation Server",
             position = VirtualBluetoothNode.Position(50.0, 50.0)
         )
 
         _isConnected.value = true
         emit(ConnectionResult.ConnectionEstablished)
 
-        // Listen for incoming messages on the virtual node
+        // Listen for incoming messages
         currentVirtualNode?.let { node ->
             node.incomingMessages.collect { message ->
-                // Run through IDS
                 val analyzedMessage = dataTransferService?.analyzeMessage(
                     message = message.content,
                     fromDevice = message.source,
@@ -139,25 +134,24 @@ class AndroidBluetoothController @Inject constructor(
     }
 
     override fun connectToDevice(device: BluetoothDevice): Flow<ConnectionResult> = flow {
-        Log.d("BluetoothController", "Connecting to simulated device: ${device.name}")
+        Log.d("SimulationController", "Connecting to: ${device.name}")
 
         _isConnected.value = false
         emit(ConnectionResult.ConnectionEstablished)
 
-        delay(1000) // Simulate connection time
+        delay(500) // Simulate connection time
 
-        // Get the virtual node
         val targetNode = simulationEngine.getNode(device.address)
         if (targetNode == null) {
             emit(ConnectionResult.Error("Virtual node not found"))
             return@flow
         }
 
-        // Create a local node if we don't have one
+        // Create local node if needed
         if (currentVirtualNode == null) {
             currentVirtualNode = simulationEngine.createNode(
-                id = "local_client_${System.currentTimeMillis()}",
-                name = "My Device",
+                id = "client_${System.currentTimeMillis()}",
+                name = "My Simulated Device",
                 position = VirtualBluetoothNode.Position(
                     x = targetNode.position.x + 30,
                     y = targetNode.position.y
@@ -165,17 +159,16 @@ class AndroidBluetoothController @Inject constructor(
             )
         }
 
-        // Connect the nodes
+        // Connect nodes
         currentVirtualNode?.connectToNode(targetNode.nodeId)
         _connectedDeviceAddress = device.address
         _isConnected.value = true
 
-        Log.d("BluetoothController", "Connected to ${device.name}")
+        Log.d("SimulationController", "Connected to ${device.name}")
         emit(ConnectionResult.ConnectionEstablished)
 
-        // Listen for messages from the target node
+        // Listen for messages
         targetNode.incomingMessages.collect { message ->
-            // Run through IDS
             val analyzedMessage = dataTransferService?.analyzeMessage(
                 message = message.content,
                 fromDevice = message.source,
@@ -190,12 +183,9 @@ class AndroidBluetoothController @Inject constructor(
     }
 
     override suspend fun trySendMessage(message: String): BluetoothMessage? {
-        Log.d("BluetoothController", "Sending simulated message: $message")
+        Log.d("SimulationController", "Sending message: $message")
 
-        val currentNode = currentVirtualNode ?: run {
-            Log.w("BluetoothController", "No current virtual node")
-            return null
-        }
+        val currentNode = currentVirtualNode ?: return null
 
         // Analyze outgoing message
         val analyzedMessage = dataTransferService?.analyzeMessage(
@@ -208,12 +198,10 @@ class AndroidBluetoothController @Inject constructor(
         // Send through virtual network
         val connectedNodes = currentNode.nodeState.value.connectedNodes
         if (connectedNodes.isNotEmpty()) {
-            // Send to first connected node or specific device
             val targetId = _connectedDeviceAddress ?: connectedNodes.first()
             val success = currentNode.sendMessage(targetId, message)
 
             if (success) {
-                Log.d("BluetoothController", "Message sent successfully through simulation")
                 return analyzedMessage ?: BluetoothMessage(
                     message = message,
                     senderName = currentNode.nodeName,
@@ -222,13 +210,11 @@ class AndroidBluetoothController @Inject constructor(
             }
         }
 
-        Log.w("BluetoothController", "Failed to send message - no connected nodes")
         return null
     }
 
     override fun closeConnection() {
-        Log.d("BluetoothController", "Closing simulated connection")
-
+        Log.d("SimulationController", "Closing connection")
         currentVirtualNode?.shutdown()
         currentVirtualNode = null
         _connectedDeviceAddress = null
@@ -236,8 +222,7 @@ class AndroidBluetoothController @Inject constructor(
     }
 
     override fun release() {
-        Log.d("BluetoothController", "Releasing simulation resources")
-
+        Log.d("SimulationController", "Releasing resources")
         closeConnection()
         simulationEngine.shutdown()
         dataTransferService?.shutdown()
@@ -252,48 +237,59 @@ class AndroidBluetoothController @Inject constructor(
             )
         }
 
-        // Show some as "paired" and others as "available"
+        // Simulate paired and available devices
         _pairedDevices.value = virtualDevices.take(3)
         _scannedDevices.value = virtualDevices.drop(3)
-
-        Log.d("BluetoothController", "Updated device lists - Paired: ${_pairedDevices.value.size}, Scanned: ${_scannedDevices.value.size}")
     }
 
-    /**
-     * Simulate multi-hop message routing
-     * This is for testing purposes - shows how messages hop through the network
-     */
-    fun simulateMultiHopMessage(
-        sourceNodeId: String,
-        destinationNodeId: String,
-        message: String
-    ) {
-        coroutineScope.launch {
-            val sourceNode = simulationEngine.getNode(sourceNodeId)
-            val destNode = simulationEngine.getNode(destinationNodeId)
-
-            if (sourceNode != null && destNode != null) {
-                Log.d("BluetoothController", "Simulating multi-hop from ${sourceNode.nodeName} to ${destNode.nodeName}")
-                sourceNode.sendMessage(destinationNodeId, message)
-            }
-        }
+    // Additional simulation features
+    fun changeNetworkTopology(topology: TopologyType, nodeCount: Int) {
+        simulationEngine.initializeSimulation(
+            SimulationConfig(
+                topology = topology,
+                nodeCount = nodeCount
+            )
+        )
+        updateDeviceLists()
     }
 
-    /**
-     * Get simulation statistics
-     */
-    fun getSimulationStats(): String {
+    fun getSimulationStatistics(): SimulationStatistics {
         val state = simulationEngine.simulationState.value
-        return """
-            Simulation Statistics:
-            - Nodes: ${state.nodeCount}
-            - Connections: ${state.connectionCount}
-            - Messages: ${state.messageCount}
-            - IDS Status: ${dataTransferService?.getStatistics() ?: "N/A"}
-        """.trimIndent()
+        return SimulationStatistics(
+            nodeCount = state.nodeCount,
+            connectionCount = state.connectionCount,
+            totalMessages = state.messageCount,
+            averageHopCount = simulationEngine.getAverageHopCount(),
+            deliveryRate = simulationEngine.getDeliverySuccessRate(),
+            idsStatus = dataTransferService?.getStatistics() ?: "N/A"
+        )
     }
 
-    companion object {
-        const val SIMULATION_MODE = true
+    fun simulateNetworkConditions(
+        packetLoss: Float = 0.1f,
+        latencyMs: Long = 100L,
+        jitterMs: Long = 50L
+    ) {
+        // This would be implemented in the simulation engine
+        Log.d("SimulationController", "Simulating network conditions - Loss: $packetLoss, Latency: $latencyMs ms")
+    }
+
+    data class SimulationStatistics(
+        val nodeCount: Int,
+        val connectionCount: Int,
+        val totalMessages: Long,
+        val averageHopCount: Double,
+        val deliveryRate: Double,
+        val idsStatus: String
+    )
+
+    // Network topology access for visualization
+    fun getNetworkTopology(): SimulationEngine.NetworkTopology {
+        return simulationEngine.simulationState.value.topology
+    }
+
+    // Get current simulation state for monitoring
+    fun getSimulationState(): StateFlow<SimulationEngine.SimulationState> {
+        return simulationEngine.simulationState
     }
 }

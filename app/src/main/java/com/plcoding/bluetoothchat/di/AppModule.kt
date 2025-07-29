@@ -23,8 +23,8 @@ object AppModule {
         @ApplicationContext context: Context,
         messageLogDao: MessageLogDao
     ): BluetoothController {
-        // Return simulation controller when in simulation mode
-        return AndroidBluetoothController(context, messageLogDao)
+        // Always return simulation controller
+        return SimulationBluetoothController(context, messageLogDao)
     }
 
     @Provides
@@ -33,7 +33,7 @@ object AppModule {
         return Room.databaseBuilder(
             app,
             AppDatabase::class.java,
-            "bluetooth_chat_db"
+            "bluetooth_simulation_db"
         ).build()
     }
 
